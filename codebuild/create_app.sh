@@ -67,9 +67,15 @@ if [ "$RUNTIME" = "python" ]; then
 elif [ "$RUNTIME" = "react" ]; then
   echo "⚛️ React setup with NPM"
 
-  # Install Node.js if missing
-  if ! command -v node &> /dev/null; then
-    echo "📥 Installing Node.js"
+  # Check if Node.js is missing or below version 20
+  if command -v node &> /dev/null; then
+    NODE_MAJOR_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+  else
+    NODE_MAJOR_VERSION=0
+  fi
+
+  if [ "$NODE_MAJOR_VERSION" -lt 20 ]; then
+    echo "📥 Installing/Upgrading Node.js to version 20.x (Current: v$NODE_MAJOR_VERSION)"
     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
   fi
