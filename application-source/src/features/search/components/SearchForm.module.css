@@ -1,0 +1,202 @@
+.form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--bg-card);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-soft);
+}
+
+.fieldGroup,
+.fieldGroupWide {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldGroupWide {
+  grid-column: 1 / -1;
+}
+
+.fieldGroup label,
+.fieldGroupWide label,
+.fieldset legend {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.fieldGroup input,
+.fieldGroupWide input,
+.fieldGroup select {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--text-main);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.fieldGroup input::placeholder,
+.fieldGroupWide input::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.fieldGroup input:focus,
+.fieldGroupWide input:focus,
+.fieldGroup select:focus,
+.submitButton:focus,
+.resetButton:focus {
+  border-color: var(--focus);
+}
+
+.fieldset {
+  grid-column: 1 / -1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin: 0;
+}
+
+.engineGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 10px;
+}
+
+.quickFilters {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.checkboxItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.engineIcon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.toggleRow {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.submitButton,
+.stopButton,
+.resetButton {
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 42px;
+}
+
+.submitButton {
+  background: linear-gradient(135deg, var(--brand), #0ea5e9);
+  color: #fff;
+}
+
+.stopButton {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
+.stopButton:hover {
+  background: #fee2e2;
+}
+
+.submitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.resetButton {
+  background: #edf2ff;
+  color: #0f2f75;
+}
+
+@media (max-width: 1150px) {
+  .quickFilters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .form {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .quickFilters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .quickFilters {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .submitButton,
+  .stopButton,
+  .resetButton {
+    width: 100%;
+  }
+
+  .engineGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .form {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .fieldset {
+    padding: 10px;
+  }
+
+  .toggleRow {
+    gap: 10px;
+  }
+
+  .checkboxItem {
+    font-size: 0.92rem;
+  }
+}

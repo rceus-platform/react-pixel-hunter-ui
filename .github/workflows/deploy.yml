@@ -1,0 +1,87 @@
+name: Deploy App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy latest code
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          envs: GITHUB_REPOSITORY,VITE_API_BASE_URL,VITE_PERSIST_SEARCH_CACHE,SITE_PASSCODE
+          script: |
+            set -e
+
+            APP_NAME="$(basename $GITHUB_REPOSITORY)"
+            APP_DIR="/opt/apps/$APP_NAME"
+            SERVICE_NAME=$APP_NAME.service
+            MANIFEST=$APP_DIR/codebuild/app.manifest.json
+
+            echo "➡ Deploying $APP_NAME"
+
+            cd $APP_DIR
+
+            echo "🧹 Cleaning untracked files"
+            git clean -fd
+            git stash
+
+            echo "📥 Pulling code"
+            git pull origin main
+
+            if [ ! -f "$MANIFEST" ]; then
+              echo "❌ Missing manifest: $MANIFEST"
+              exit 1
+            fi
+
+            RUNTIME=$(jq -r '.runtime' "$MANIFEST")
+            WORKDIR=$(jq -r '.working_dir' "$MANIFEST")
+            APP_WORKDIR="$APP_DIR/$WORKDIR"
+            cd "$APP_WORKDIR"
+
+            # ── Write .env from manifest env_vars ──
+            echo "🔐 Writing .env"
+            > .env
+            for VAR in $(jq -r '.env_vars[]' "$MANIFEST"); do
+              echo "${VAR}=${!VAR}" >> .env
+            done
+            chown ubuntu:ubuntu .env
+            chmod 600 .env
+            echo "  ✅ .env written with $(wc -l < .env) variable(s)"
+
+            if [ "$RUNTIME" = "react" ]; then
+              echo "📦 Installing dependencies (NPM)"
+              sudo -u ubuntu npm install
+              echo "🏗 Building application"
+              sudo -u ubuntu npm run build
+            else
+              echo "📦 Installing dependencies (Poetry)"
+              export PATH="$PATH:/home/ubuntu/.local/bin"
+              sudo -u ubuntu poetry install --no-root --no-interaction
+            fi
+
+            if [ "$RUNTIME" != "react" ]; then
+              echo "🔁 Restarting service"
+              sudo systemctl daemon-reload
+              sudo systemctl restart $SERVICE_NAME
+
+              echo "🩺 Verifying service"
+              sleep 2
+              sudo systemctl is-active --quiet $SERVICE_NAME
+            fi
+
+            echo "🌐 Reloading nginx"
+            sudo systemctl reload nginx
+
+            echo "✅ Deploy completed successfully"
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_PERSIST_SEARCH_CACHE: ${{ secrets.VITE_PERSIST_SEARCH_CACHE }}
+          SITE_PASSCODE: ${{ secrets.SITE_PASSCODE }}

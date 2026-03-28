@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Vite: pixel-hunter-ui",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/application-source",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "dev",
+                "--",
+                "--host"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Chrome: Debug",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/application-source/src"
+        }
+    ]
+}

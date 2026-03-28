@@ -1,0 +1,149 @@
+.grid {
+  --columns: 5;
+  gap: clamp(10px, 1.8vw, 16px);
+  overflow: visible;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+}
+
+.listGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.moodboardGrid {
+  column-count: var(--columns);
+  column-width: auto;
+  column-gap: clamp(10px, 1.8vw, 16px);
+  column-fill: balance;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: clip;
+  overflow-y: visible;
+  box-sizing: border-box;
+  position: relative;
+  left: 0;
+}
+
+.moodboardGrid > * {
+  display: block;
+  break-inside: avoid;
+  break-inside: avoid-column;
+  margin-bottom: clamp(10px, 1.8vw, 16px);
+  width: 100%;
+  max-width: 100%;
+}
+
+.stateCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  width: 100%;
+}
+
+.stateCard h2 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.stateCard p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.warningCard {
+  border-color: #fbcfe8;
+  background: #fff1f2;
+}
+
+.warningCard h2 {
+  color: #9f1239;
+}
+
+.spinnerWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 16px;
+  width: 100%;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #cbd5e1;
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.skeletonCard {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 12px;
+  background: var(--surface);
+}
+
+.skeletonImage,
+.skeletonLine,
+.skeletonLineShort {
+  border-radius: 10px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 37%, #e2e8f0 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeletonImage {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 10px;
+}
+
+.skeletonLine {
+  height: 14px;
+  width: 90%;
+  margin-bottom: 8px;
+}
+
+.skeletonLineShort {
+  height: 14px;
+  width: 60%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .stateCard {
+    border-radius: 14px;
+    padding: 16px;
+  }
+}
