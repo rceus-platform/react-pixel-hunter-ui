@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
-import LocalFilterPopup from './LocalFilterPopup';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActiveFilterState, AvailableFilters, FilterChip } from '../../../types';
+import { LocalFilterPopup } from '../../filters';
 import styles from './ResultsSummary.module.css';
 
 const VIEW_OPTIONS = [
   { value: 'list', label: 'List' },
   { value: 'cards', label: 'Cards' },
   { value: 'moodboard', label: 'Moodboard' }
-];
+] as const;
+
 const FIELD_OPTIONS = [
   { key: 'cover', label: 'Cover' },
   { key: 'title', label: 'Title' },
@@ -16,9 +18,9 @@ const FIELD_OPTIONS = [
   { key: 'description', label: 'Description' },
   { key: 'highlights', label: 'Highlights' },
   { key: 'tags', label: 'Tags' }
-];
+] as const;
 
-function ViewIcon({ mode }) {
+function ViewIcon({ mode }: { mode: string }) {
   if (mode === 'list') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -50,7 +52,28 @@ function FilterIcon() {
   );
 }
 
-export default function ResultsSummary({
+interface Props {
+  count: number;
+  filteredCount: number;
+  chips: string[];
+  wasLastResultFromCache: boolean;
+  hoverExpandEnabled: boolean;
+  setHoverExpandEnabled: (enabled: boolean) => void;
+  viewMode: string;
+  setViewMode: (mode: 'cards' | 'compact' | string) => void;
+  coverScale: number;
+  setCoverScale: (scale: number) => void;
+  visibleFields: Record<string, boolean>;
+  setVisibleFields: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  availableFilters: AvailableFilters;
+  activeFilters: ActiveFilterState;
+  toggleFilter: (category: keyof Pick<ActiveFilterState, 'sources' | 'tags' | 'orientations'>, value: string) => void;
+  setRangeFilter: (key: keyof ActiveFilterState, value: string) => void;
+  resetLocalFilters: () => void;
+  activeFilterCount: number;
+}
+
+export const ResultsSummary: React.FC<Props> = ({
   count,
   filteredCount,
   chips,
@@ -69,13 +92,14 @@ export default function ResultsSummary({
   setRangeFilter,
   resetLocalFilters,
   activeFilterCount
-}) {
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const panelRef = useRef(null);
-  const filterRef = useRef(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
   const activeViewLabel = VIEW_OPTIONS.find((option) => option.value === viewMode)?.label ?? 'Cards';
-  const toggleField = (key, checked) => {
+  
+  const toggleField = (key: string, checked: boolean) => {
     setVisibleFields((prev) => ({
       ...prev,
       [key]: checked
@@ -85,8 +109,8 @@ export default function ResultsSummary({
   useEffect(() => {
     if (!isOpen) return undefined;
 
-    const handleClickAway = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
+    const handleClickAway = (event: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -106,9 +130,9 @@ export default function ResultsSummary({
         </p>
         {wasLastResultFromCache ? <span className={styles.cacheBadge}>From cache</span> : null}
         <div className={styles.chips}>
-          {chips.map((chip) => (
-            <span className={styles.chip} key={chip}>
-              {chip}
+          {chips.map((chip, index) => (
+            <span className={styles.chip} key={typeof chip === 'string' ? chip : index}>
+              {typeof chip === 'string' ? chip : String(chip)}
             </span>
           ))}
         </div>
@@ -214,7 +238,6 @@ export default function ResultsSummary({
               toggleFilter={toggleFilter}
               setRangeFilter={setRangeFilter}
               resetFilters={resetLocalFilters}
-              activeCount={activeFilterCount}
               onClose={() => setIsFiltersOpen(false)}
             />
           ) : null}
@@ -222,4 +245,4 @@ export default function ResultsSummary({
       </div>
     </section>
   );
-}
+};

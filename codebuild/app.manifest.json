@@ -1,7 +1,12 @@
 {
-  "runtime": "python",
+  "runtime": "react",
   "working_dir": "application-source",
-  "start_command": ".venv/bin/gunicorn trigger_engine.asgi:application -k uvicorn.workers.UvicornWorker --bind 127.0.0.1:8000",
-  "port": 8000,
-  "domain": "trigger-engine.rceus.duckdns.org"
+  "port": null,
+  "start_command": null,
+  "domain": "pixel-hunter-ui.rceus.duckdns.org",
+  "env_vars": [
+    "VITE_API_BASE_URL",
+    "VITE_PERSIST_SEARCH_CACHE",
+    "SITE_PASSCODE"
+  ]
 }

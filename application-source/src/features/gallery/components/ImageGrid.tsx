@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
-import ImageCard from './ImageCard';
+import React, { useEffect, useState } from 'react';
+import { ImageResult } from '../../../types';
+import { ImageCard } from './ImageCard';
 import styles from './ImageGrid.module.css';
 
-const getColumnCap = (viewportWidth) => {
+const getColumnCap = (viewportWidth: number) => {
   if (viewportWidth < 480) return 1;
   if (viewportWidth < 768) return 2;
   if (viewportWidth < 1024) return 3;
@@ -10,7 +11,18 @@ const getColumnCap = (viewportWidth) => {
   return 5;
 };
 
-export default function ImageGrid({
+interface Props {
+  results: ImageResult[];
+  isLoading: boolean;
+  error?: string;
+  hasSearched: boolean;
+  hoverExpandEnabled: boolean;
+  viewMode: string;
+  coverScale: number;
+  visibleFields: Record<string, boolean>;
+}
+
+export const ImageGrid: React.FC<Props> = ({
   results,
   isLoading,
   error,
@@ -19,11 +31,11 @@ export default function ImageGrid({
   viewMode,
   coverScale,
   visibleFields
-}) {
+}) => {
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
 
   useEffect(() => {
-    let rafId = null;
+    let rafId: number | null = null;
 
     const handleResize = () => {
       if (rafId !== null) return;
@@ -61,10 +73,10 @@ export default function ImageGrid({
             columnCount: columns,
             width: '100%',
             marginInline: '0'
-          }
+          } as React.CSSProperties
         : {
             '--columns': columns
-          };
+          } as React.CSSProperties;
 
   const hasPartialResults = results.length > 0;
   const showStreamingNotice = isLoading && hasPartialResults;
@@ -127,13 +139,14 @@ export default function ImageGrid({
         {results.map((item, index) => (
           <ImageCard
             key={`${item.url}-${item.width}-${item.height}-${index}`}
-            item={item}
+            result={item}
             hoverExpandEnabled={hoverExpandEnabled}
             viewMode={viewMode}
+            coverScale={coverScale}
             visibleFields={visibleFields}
           />
         ))}
       </section>
     </>
   );
-}
+};

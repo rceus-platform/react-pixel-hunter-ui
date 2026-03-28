@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { getDownloadUrl } from '../api/pixelHunterApi';
+import React, { useEffect, useRef, useState } from 'react';
+import { ImageResult } from '../../../types';
+import { getDownloadUrl } from '../../search';
 import styles from './ImageCard.module.css';
 
-const getThumbnailUrl = (imageUrl, viewMode) => {
+const getThumbnailUrl = (imageUrl: string, viewMode: string) => {
   const normalized = imageUrl.replace(/^https?:\/\//, '');
   const params = new URLSearchParams({ url: normalized, q: '70', output: 'webp' });
 
@@ -52,7 +53,7 @@ function DownloadIcon() {
   );
 }
 
-const detectSourceEngine = (url) => {
+const detectSourceEngine = (url: string) => {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
     if (hostname.includes('bing.')) return 'bing';
@@ -67,7 +68,7 @@ const detectSourceEngine = (url) => {
   }
 };
 
-const getTitleFromUrl = (url) => {
+const getTitleFromUrl = (url: string) => {
   try {
     const pathname = new URL(url).pathname;
     const raw = decodeURIComponent(pathname.split('/').pop() || '');
@@ -78,9 +79,9 @@ const getTitleFromUrl = (url) => {
   }
 };
 
-const asText = (value) => (typeof value === 'string' && value.trim() ? value.trim() : '');
-const asStringArray = (value) => (Array.isArray(value) ? value.filter((item) => typeof item === 'string') : []);
-const toTitleCase = (value) =>
+const asText = (value: any) => (typeof value === 'string' && value.trim() ? value.trim() : '');
+const asStringArray = (value: any) => (Array.isArray(value) ? value.filter((item) => typeof item === 'string') : []);
+const toTitleCase = (value: string) =>
   value
     .toLowerCase()
     .split(/\s+/)
@@ -88,29 +89,38 @@ const toTitleCase = (value) =>
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
-const SEARCH_ENGINE_LABELS = {
+const SEARCH_ENGINE_LABELS: Record<string, string> = {
   bing: 'Bing',
   google: 'Google',
   duckduckgo: 'DuckDuckGo',
   baidu: 'Baidu',
   yandex: 'Yandex',
-
 };
 
-export default function ImageCard({ item, hoverExpandEnabled, viewMode, visibleFields }) {
+interface Props {
+  result: ImageResult;
+  hoverExpandEnabled: boolean;
+  viewMode: string;
+  coverScale: number;
+  visibleFields: Record<string, boolean>;
+}
+
+export const ImageCard: React.FC<Props> = ({ result, hoverExpandEnabled, viewMode, visibleFields }) => {
+  const item = result;
+  
   const isCardsView = viewMode === 'cards';
   const resolution = `${item.width}x${item.height}`;
   const size = asText(item.size);
-  const coverUrl = asText(item.cover) || item.url;
+  const coverUrl = asText(item.thumbnail) || asText((item as any).cover) || item.url;
   const source = asText(item.source) || detectSourceEngine(item.url);
   const searchEngineRaw = asText(item.search_engine) || detectSourceEngine(item.url);
   const normalizedSearchEngine = searchEngineRaw.trim().toLowerCase().replace(/^www\./, '').replace(/\..*$/, '');
   const searchEngine = SEARCH_ENGINE_LABELS[normalizedSearchEngine] || toTitleCase(searchEngineRaw.replace(/[_-]+/g, ' '));
   const rawTitle = asText(item.title) || getTitleFromUrl(item.url);
   const title = toTitleCase(rawTitle.replace(/[_-]+/g, ' '));
-  const note = asText(item.note);
+  const note = asText((item as any).note);
   const description = asText(item.description);
-  const highlights = asStringArray(item.highlights);
+  const highlights = asStringArray((item as any).highlights);
   const tags = asStringArray(item.tags);
 
   const orientation = item.width >= item.height ? 'landscape' : 'portrait';
@@ -120,11 +130,13 @@ export default function ImageCard({ item, hoverExpandEnabled, viewMode, visibleF
   const [useOriginalImage, setUseOriginalImage] = useState(false);
   const [fullImageReady, setFullImageReady] = useState(false);
   const [isTimedExpanded, setIsTimedExpanded] = useState(false);
-  const [expandShiftStyle, setExpandShiftStyle] = useState({});
-  const collapseOnMoveRef = useRef(null);
-  const expandTargetRef = useRef(null);
-  const preloadRef = useRef(null);
-  const expandDelayTimerRef = useRef(null);
+  const [expandShiftStyle, setExpandShiftStyle] = useState<React.CSSProperties>({});
+  
+  const collapseOnMoveRef = useRef<((event: PointerEvent) => void) | null>(null);
+  const expandTargetRef = useRef<HTMLElement | null>(null);
+  const preloadRef = useRef<HTMLImageElement | null>(null);
+  const expandDelayTimerRef = useRef<number | null>(null);
+  
   const imageSource = useOriginalImage ? coverUrl : getThumbnailUrl(coverUrl, viewMode);
   const activeImageSource = fullImageReady ? item.url : imageSource;
   const modeClassName =
@@ -185,7 +197,7 @@ export default function ImageCard({ item, hoverExpandEnabled, viewMode, visibleF
     clearMoveListener();
   };
 
-  const handleThumbnailEnter = (element) => {
+  const handleThumbnailEnter = (element: HTMLElement) => {
     if (!hoverExpandEnabled) return;
     if (!window.matchMedia('(hover: hover)').matches) return;
 
@@ -197,7 +209,7 @@ export default function ImageCard({ item, hoverExpandEnabled, viewMode, visibleF
       expandTargetRef.current = element;
       setIsTimedExpanded(true);
 
-      const handlePointerMove = (event) => {
+      const handlePointerMove = (event: PointerEvent) => {
         const target = expandTargetRef.current;
         if (!target) {
           collapseExpandedPreview();
@@ -226,7 +238,7 @@ export default function ImageCard({ item, hoverExpandEnabled, viewMode, visibleF
     clearExpandDelayTimer();
   };
 
-  const handleThumbnailAnchorEnter = (element) => {
+  const handleThumbnailAnchorEnter = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
@@ -262,7 +274,7 @@ export default function ImageCard({ item, hoverExpandEnabled, viewMode, visibleF
       '--expand-shift-x': `${shiftX}px`,
       '--expand-shift-y': `${shiftY}px`,
       '--expand-scale': expandScale.toFixed(3)
-    });
+    } as React.CSSProperties);
 
     window.requestAnimationFrame(() => {
       handleThumbnailEnter(element);
@@ -428,7 +440,7 @@ export default function ImageCard({ item, hoverExpandEnabled, viewMode, visibleF
           <div className={styles.listMetaTop}>
             <span className={styles.badge}>{resolution}</span>
             {size ? <span className={styles.sizeBadge}>{size}</span> : null}
-            {item.unverified ? <span className={styles.warningBadge}>Unverified</span> : null}
+            {(item as any).unverified ? <span className={styles.warningBadge}>Unverified</span> : null}
           </div>
           {actionsNode}
         </aside>
@@ -475,7 +487,7 @@ export default function ImageCard({ item, hoverExpandEnabled, viewMode, visibleF
         <div className={styles.metaCluster}>
           <span className={styles.badge}>{resolution}</span>
           {size ? <span className={styles.sizeBadge}>{size}</span> : null}
-          {item.unverified ? <span className={styles.warningBadge}>Unverified</span> : null}
+          {(item as any).unverified ? <span className={styles.warningBadge}>Unverified</span> : null}
         </div>
         {actionsNode}
       </div>
@@ -483,4 +495,4 @@ export default function ImageCard({ item, hoverExpandEnabled, viewMode, visibleF
       {detailsNode}
     </article>
   );
-}
+};

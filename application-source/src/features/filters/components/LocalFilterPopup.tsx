@@ -1,20 +1,25 @@
-import { useEffect, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
+import { ActiveFilterState, AvailableFilters } from '../../../types';
 import styles from './LocalFilterPopup.module.css';
 
-export default function LocalFilterPopup({ 
-  availableFilters, 
-  activeFilters, 
-  toggleFilter, 
-  setRangeFilter, 
-  resetFilters,
-  onClose,
-  activeCount
-}) {
-  const panelRef = useRef(null);
+interface Props {
+  availableFilters: AvailableFilters;
+  activeFilters: ActiveFilterState;
+  toggleFilter: (category: keyof Pick<ActiveFilterState, 'sources' | 'tags' | 'orientations'>, value: string) => void;
+  setRangeFilter: (key: keyof ActiveFilterState, value: string) => void;
+  resetFilters: () => void;
+  onClose: () => void;
+  activeCount?: number;
+}
+
+export const LocalFilterPopup: React.FC<Props> = ({
+  availableFilters, activeFilters, toggleFilter, setRangeFilter, resetFilters, onClose, activeCount = 0
+}) => {
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickAway = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
+    const handleClickAway = (event: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
@@ -157,4 +162,4 @@ export default function LocalFilterPopup({
       </div>
     </div>
   );
-}
+};

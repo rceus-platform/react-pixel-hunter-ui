@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Vite: Dev",
+            "name": "Vite: pixel-hunter-ui",
             "type": "node",
             "request": "launch",
             "cwd": "${workspaceFolder}/application-source",

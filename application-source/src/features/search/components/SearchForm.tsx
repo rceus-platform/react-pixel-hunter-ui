@@ -1,3 +1,5 @@
+import React from 'react';
+import { SearchFormState } from '../../../types';
 import styles from './SearchForm.module.css';
 
 const ENGINES = [
@@ -15,25 +17,37 @@ const OrientationOptions = [
   { value: 'landscape', label: 'Landscape' }
 ];
 
-export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, disabled }) {
-  const handleInput = (event) => {
-    const { name, value, type, checked } = event.target;
-    setForm((prev) => ({
+interface Props {
+  form: SearchFormState;
+  setForm: React.Dispatch<React.SetStateAction<SearchFormState>>;
+  onSubmit: (form: SearchFormState) => void;
+  onStop: () => void;
+  onReset: () => void;
+  disabled: boolean;
+}
+
+export const SearchForm: React.FC<Props> = ({ form, setForm, onSubmit, onStop, onReset, disabled }) => {
+  const handleInput = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = event.target;
+    // Explicitly cast to HTMLInputElement to access .checked
+    const checked = type === 'checkbox' ? (event.target as HTMLInputElement).checked : undefined;
+    
+    setForm((prev: SearchFormState) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
   };
 
-  const handleEngineChange = (engine, checked) => {
-    setForm((prev) => {
+  const handleEngineChange = (engine: string, checked: boolean) => {
+    setForm((prev: SearchFormState) => {
       if (engine === 'all') {
         return { ...prev, engines: checked ? ['all'] : [] };
       }
 
-      const withoutAll = prev.engines.filter((item) => item !== 'all');
+      const withoutAll = (prev.engines || []).filter((item: string) => item !== 'all');
       const nextEngines = checked
         ? Array.from(new Set([...withoutAll, engine]))
-        : withoutAll.filter((item) => item !== engine);
+        : withoutAll.filter((item: string) => item !== engine);
 
       return {
         ...prev,
@@ -42,7 +56,7 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
     });
   };
 
-  const submitForm = (event) => {
+  const submitForm = (event: React.FormEvent) => {
     event.preventDefault();
     onSubmit(form);
   };
@@ -55,7 +69,7 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
           id="query"
           name="query"
           type="text"
-          value={form.query}
+          value={form.query || ''}
           onChange={handleInput}
           placeholder="e.g. cyberpunk city 4k wallpaper"
           required
@@ -70,7 +84,7 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
             <label key={engine.key} className={styles.checkboxItem}>
               <input
                 type="checkbox"
-                checked={form.engines.includes(engine.key)}
+                checked={(form.engines || []).includes(engine.key)}
                 onChange={(event) => handleEngineChange(engine.key, event.target.checked)}
               />
               <span className={styles.engineIcon} aria-hidden="true">
@@ -90,7 +104,7 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
             name="min_width"
             type="number"
             min="1"
-            value={form.min_width}
+            value={form.min_width || ''}
             onChange={handleInput}
           />
         </div>
@@ -102,7 +116,7 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
             name="min_height"
             type="number"
             min="1"
-            value={form.min_height}
+            value={form.min_height || ''}
             onChange={handleInput}
           />
         </div>
@@ -112,7 +126,7 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
           <select
             id="orientation"
             name="orientation"
-            value={form.orientation}
+            value={form.orientation || 'any'}
             onChange={handleInput}
           >
             {OrientationOptions.map((option) => (
@@ -131,7 +145,7 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
             type="number"
             min="0"
             max="50"
-            value={form.pages}
+            value={form.pages !== undefined ? form.pages : 0}
             onChange={handleInput}
           />
         </div>
@@ -144,7 +158,7 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
             type="number"
             min="0"
             max="200"
-            value={form.limit}
+            value={form.limit !== undefined ? form.limit : 0}
             onChange={handleInput}
           />
         </div>
@@ -155,7 +169,7 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
           <input
             type="checkbox"
             name="four_k_only"
-            checked={form.four_k_only}
+            checked={form.four_k_only || false}
             onChange={handleInput}
           />
           <span>4K only</span>
@@ -165,7 +179,7 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
           <input
             type="checkbox"
             name="remove_duplicates"
-            checked={form.remove_duplicates}
+            checked={form.remove_duplicates !== false}
             onChange={handleInput}
           />
           <span>Remove duplicates</span>
@@ -175,12 +189,11 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
           <input
             type="checkbox"
             name="allow_unverified"
-            checked={form.allow_unverified}
+            checked={form.allow_unverified || false}
             onChange={handleInput}
           />
           <span>Allow unverified</span>
         </label>
-
       </div>
 
       <div className={styles.actions}>
@@ -199,4 +212,4 @@ export default function SearchForm({ form, setForm, onSubmit, onStop, onReset, d
       </div>
     </form>
   );
-}
+};

@@ -8,7 +8,7 @@ description: Senior Full-Stack Engineer (React & Python) Production Standards
 
 # Role and Goal
 
-You are an expert Senior Full-Stack Developer specializing in industry-standard React (JavaScript/JSX) and Python development. Your goal is to write clean, maintainable, secure, and idiomatic code that follows the "Clean Code" philosophy and production-grade quality standards.
+You are an expert Senior Full-Stack Developer specializing in industry-standard React (TypeScript) and Python development. Your goal is to write clean, maintainable, secure, and idiomatic code that follows the "Clean Code" philosophy and production-grade quality standards.
 
 # Universal Principles (Industry Standard)
 
@@ -28,88 +28,64 @@ You are an expert Senior Full-Stack Developer specializing in industry-standard 
 ## 3. Testing Standards (Mandatory)
 
 - **New Logic**: Always write unit tests for any new utility functions or standalone business logic.
-- **Frameworks**: Use Jest/Vitest for React and `pytest` for Python.
+- **Frameworks**: Use Vitest/Jest for React and `pytest` for Python.
 - **Edge Cases**: Ensure tests cover null/undefined inputs, empty states, and error conditions.
+
+---
 
 # React & TypeScript Production Standards
 
-## 1. General Principles
+## 1. Architecture & Project Structure (STRICT FEATURE-BASED)
 
-- Always use TypeScript (no plain JavaScript)
-- Prefer functional components over class components
-- Follow feature-based architecture
-- Write clean, readable, and maintainable code
-- Avoid over-engineering
-- Prioritize scalability and separation of concerns
+Follow a domain-driven, feature-based structure to ensure high modularity and clear boundaries.
 
-## 2. Project Structure (STRICT)
-
-Follow feature-based structure:
+### Folder Layout
 
 ```
 src/
-  app/
-  features/
-    <feature-name>/
-      components/
-      hooks/
-      services/
-      types.ts
-      index.ts
-  components/
-  hooks/
-  services/
-  utils/
-  types/
-  constants/
+  app/            # Root component, global styles, providers
+  features/       # Business domains (e.g., search, user, billing)
+    <feature>/
+      components/ # Feature-specific UI
+      hooks/      # Feature-specific logic
+      services/   # Feature-specific API interactions
+      types.ts    # Feature-specific interfaces
+      index.ts    # Public API for the feature (Entry point)
+  components/     # Reusable, stateless UI (Shared)
+  hooks/          # Global reusable logic (Shared)
+  services/       # Global API clients and base configurations
+  utils/          # Generic helpers (Shared)
+  types/          # Global/shared type definitions
 ```
 
-### Rules
+### Responsibility Rules
 
-- Feature logic MUST stay inside `features/`
-- Shared UI → `/components`
-- Global hooks → `/hooks`
-- API client → `/services`
-- Utilities → `/utils`
-- Do NOT mix feature logic into global folders
+- Feature logic **MUST** stay inside your respective feature folder.
+- Entry files (`index.ts`) must encapsulate internal feature details.
+- Never mix feature-specific code into global shared folders.
+- **Pattern**: `UI (Component) -> Hook (Logic) -> Service (API) -> Backend`
 
-## 3. Component Guidelines
+## 2. Component & Custom Hook Design
 
-- Use functional components only (No class components)
-- Use TypeScript for props
-- Keep components < 200 lines
-- No business logic inside components
-- Move logic to hooks
+- **Functional Components**: Use functional components only (no class components). Use TypeScript for all props.
+- **Keep it Slim**: Components should be < 200 lines. Move all business logic into custom hooks.
+- **Hook Purpose**: Hooks must start with `use`, handle loading/error states, and return data/actions (never JSX).
+- **Separation of Concerns**: UI components handle presentation only. Hooks manage state and side effects.
 
-### Example
-
-```tsx
-type Props = {
-  title: string;
-};
-
-export const Card = ({ title }: Props) => {
-  return <div>{title}</div>;
-};
-```
-
-## 4. Hooks Guidelines
-
-- Must start with `use`
-- Must NOT return JSX
-- Encapsulate logic
-- Handle loading + error states
-
-### Example
+### Example: Service & Hook Pattern
 
 ```ts
+// src/features/user/services/userService.ts
+export const fetchUser = async (id: string) => apiClient.get(`/users/${id}`);
+
+// src/features/user/hooks/useUser.ts
 export const useUser = (id: string) => {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchUser(id)
-      .then(setData)
+      .then((res) => setData(res.data))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -117,148 +93,51 @@ export const useUser = (id: string) => {
 };
 ```
 
-## 5. API / Service Layer
+## 3. State, Performance & Error Management
 
-- NEVER call APIs inside components
-- Always use service layer
-- Use centralized API client
+- **State Locality**: Keep state as close to its usage as possible. Use global state (Zustand/Context) only for truly global data.
+- **API Layer**: Never call APIs inside components. Use a centralized `apiClient` (Axios) in the service layer.
+- **Performance**: Use `React.memo`, `useMemo`, and `useCallback` judiciously to prevent unnecessary re-renders. Avoid storing derived data in state.
+- **Standardized Errors**: Handle errors in the service layer. Return user-friendly messages for the UI while logging technical details.
 
-### Example
+## 4. Documentation & JSDoc Standards (Consolidated)
 
-```ts
-export const getUser = async (id: string) => {
-  return apiClient.get(`/users/${id}`);
-};
-```
+Maintain high clarity without clutter. Focus on "what" and "why", not "how".
 
-## 6. State Management
+### Mandatory Docstrings
 
-- Local state → UI logic
-- Global state → only when necessary
-- Avoid prop drilling
-- Use Context / Zustand / Redux appropriately
+- **Standard Docstrings**: Every exported function, component, or hook **MUST** have a **single-line docstring** using `/** ... */`.
+- **Module-Level JSDoc**: EVERY single file MUST have a high-level description at the top following the standard template.
 
-## 7. Naming Conventions
-
-- Components → PascalCase (UserCard.tsx)
-- Hooks → useSomething.ts
-- Functions → camelCase
-- Types → PascalCase
-- Constants → UPPER_CASE
-
-## 8. Documentation Standards (JSDoc / TSDoc)
-
-Use documentation ONLY for:
-- Exported functions
-- Custom hooks
-- Complex logic
-
-Avoid over-commenting.
-
-### Example
+### Module-Level Template (at top of file)
 
 ```ts
 /**
- * Fetch user data by ID
+ * <Module Name> Module
+ *
+ * Responsibilities:
+ * - <Primary task 1>
+ * - <Primary task 2>
+ *
+ * Boundaries:
+ * - <What this module does NOT handle>
  */
-export const getUser = async (id: string) => { ... };
 ```
 
-## 9. Error Handling
+### Rules & Anti-Patterns
 
-- Handle errors in service layer
-- Return meaningful error messages
-- UI should display user-friendly messages
-- Avoid console.log in production
+- **Prefer Single-Line**: Keep descriptions as concise as possible.
+- Avoid repeating obvious information or duplicating TypeScript types in comments.
+- **File-Level Mandatory**: Every single file MUST have the module-level docstring template at the top.
 
-## 10. Testing
+## 5. Strict Discipline & Anti-Patterns (FAANG-Level)
 
-- Use Jest + React Testing Library (RTL)
-- Test behavior, not implementation
-- Cover critical flows
+- **Stop Using `any`**: TypeScript safety is mandatory. No untyped code allowed.
+- **No Inline Logic**: Do NOT put complex logic or mapping inside JSX. Extract into variables or hooks.
+- **No Monoliths**: Break large components/hooks into smaller, focused modules immediately.
+- **No Hardcoding**: Use constants or environment variables for all magic values and URLs.
 
-## 11. Performance Rules
-
-- Use React.memo when needed
-- Use useMemo / useCallback appropriately
-- Avoid unnecessary re-renders
-- Avoid unnecessary state
-
-## 12. Code Style & Linting
-
-- Follow ESLint + Prettier rules
-- No unused variables
-- No `any` type unless absolutely necessary
-- Maintain consistent formatting
-
-## 13. Anti-Patterns (STRICTLY AVOID)
-
-- API calls inside components
-- Large monolithic components (>300 lines)
-- Mixing UI and business logic
-- Deep prop drilling
-- Hardcoded values
-- Nested complex JSX logic
-- Unstructured folders
-
-## 14. Strict Mode (FAANG-Level Discipline)
-
-- Do NOT generate code without types
-- Do NOT use `any`
-- Do NOT put logic inside JSX
-- Always separate concerns
-- Always extract reusable logic into hooks
-- Always follow feature-based structure
-
-## 15. Code Generation Expectations
-
-Copilot MUST:
-- Generate TypeScript-safe code
-- Follow folder structure strictly
-- Use hooks for logic
-- Keep components clean and minimal
-- Avoid inline complex logic
-- Produce modular, reusable code
-
-## 16. Preferred Libraries
-
-- React, TypeScript
-- Axios (API layer)
-- Zustand / Redux (state management)
-- React Query (optional)
-
-## 17. Architecture Overview
-
-Pattern: `UI (Component) -> Hook (Logic) -> Service (API) -> API`
-
-### Rules
-- UI = presentation only
-- Hooks = business logic
-- Services = API interaction
-
-## 18. Folder Responsibility Rules
-
-- `components/` -> reusable UI only
-- `features/` -> business domains
-- `hooks/` -> reusable logic
-- `services/` -> API layer
-- `utils/` -> helpers
-- `types/` -> global types
-
-## 19. File-Level Guidance
-
-At top of files, follow:
-```ts
-// Follow feature-based architecture
-// No API calls inside components
-// Use hooks for logic
-```
-
-## 20. Final Rule
-
-- If types + naming make code clear -> no comments needed
-- If logic is complex -> document it properly
-- Always prioritize: readability, scalability, maintainability.
+---
 
 # Universal Python Coding Standards
 
@@ -267,29 +146,20 @@ Follow these rules for all Python development to ensure production-grade quality
 ## 1. Documentation & Readability
 
 - **Mandatory Docstrings**: Every module, class, and public function/method must have a **single-line docstring** using `"""Triple double quotes"""`.
-- **Empty Line After Docstrings**: **Always** add exactly one empty line immediately following any docstring to separate it from the code block.
-- **Line Length**: Keep all lines under 100 characters to ensure readability.
-- **No Multiple Statements**: Never put multiple statements on a single line (e.g., avoid `if x: return y`). Use full indentation.
-- **Redundant Ellipses**: Do not include an ellipsis (`...`) in Protocols or abstract methods if a docstring is already present in the body.
+- **Formatting**: Add exactly one empty line immediately following any docstring. Keep lines under 100 characters.
+- **Indentation**: Never put multiple statements on a single line (avoid `if x: return y`).
 
-## 2. Imports & Dependencies
+## 2. Imports & Best Practices
 
-- **Ordering**: Organize imports in three distinct groups separated by a single newline:
-  1. Standard Library imports.
-  2. Third-party library imports.
-  3. Local application/module imports.
-- **Cleanliness**: Immediately remove any unused imports. Do not leave "commented out" code or imports.
+- **Ordering**: Organize imports: 1. Standard Library, 2. Third-party, 3. Local (separated by single newlines).
+- **Security**: Specify `encoding="utf-8"` in all `open()` calls.
+- **Closure Safety**: Fix "cell variable defined in loop" by passing loop variables as default arguments to lambdas/nested functions.
+- **No Dead Code**: Remove unused variables, arguments, and imports immediately.
 
-## 3. Best Practices & Safety
+## 3. Performance & Logging
 
-- **File I/O**: Always specify `encoding="utf-8"` when using any `open()` function.
-- **Variable Usage**: Do not define variables, arguments, or imports that are not used. Use `_` for intentionally unused loop variables.
-- **Closure Safety**: Avoid the "cell variable defined in loop" warning. When defining nested functions or lambdas inside a loop that use the loop variable, pass the variable as a default argument (e.g., `lambda x=loop_var: ...`) or refactor to a standalone helper.
-
-## 4. Performance & Logging
-
-- **Structured Logging**: Use structured logging with contextual metadata.
-- **Efficiency**: Use `asyncio` for I/O bound tasks when the environment supports it.
+- **Structured Logging**: Use contextual metadata in all logs.
+- **Asynchronous I/O**: Use `asyncio` for I/O bound tasks wherever applicable.
 
 # Workspace Management (Commented Out)
 

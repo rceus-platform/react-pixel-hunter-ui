@@ -1,11 +1,23 @@
+/**
+ * Search State Hook Module
+ *
+ * Responsibilities:
+ * - Manage search form state, results streaming, and query caching.
+ * - Provide unified interface for search lifecycle actions.
+ *
+ * Boundaries:
+ * - No UI logic or gallery settings persistence (handled in App).
+ */
+
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { searchImagesStream, stopSearchStream } from '../api/pixelHunterApi';
+import { searchImagesStream, stopSearchStream } from '../services/searchService';
 import {
   DEFAULT_FORM,
   buildSearchParams,
   parseSearchParamsToForm,
   sanitizeBeforeSubmit
-} from '../utils/queryParams';
+} from '../../../utils/queryParams';
+import { ImageResult, SearchFormState } from '../../../types';
 
 const QUERY_REQUIRED_MESSAGE = 'Please enter a search query.';
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -15,16 +27,19 @@ const CACHE_STORAGE_KEY = 'pixel_hunter_search_cache_v1';
 const SHOULD_PERSIST_CACHE =
   import.meta.env.DEV && (import.meta.env.VITE_PERSIST_SEARCH_CACHE ?? 'true') === 'true';
 
-const hydrateCacheFromStorage = () => {
-  if (!SHOULD_PERSIST_CACHE) return new Map();
+interface CacheEntry {
+  timestamp: number;
+  results: ImageResult[];
+}
 
+/** Hydrates search cache from local storage. */
+const hydrateCacheFromStorage = (): Map<string, CacheEntry> => {
+  if (!SHOULD_PERSIST_CACHE) return new Map();
   try {
     const raw = window.localStorage.getItem(CACHE_STORAGE_KEY);
     if (!raw) return new Map();
-
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as [string, CacheEntry][];
     if (!Array.isArray(parsed)) return new Map();
-
     const now = Date.now();
     const hydrated = parsed.filter(([key, value]) => {
       const validKey = typeof key === 'string' && key.length > 0;
@@ -35,25 +50,25 @@ const hydrateCacheFromStorage = () => {
         Array.isArray(value.results);
       return validKey && validValue;
     });
-
     return new Map(hydrated.slice(-MAX_CACHE_ENTRIES));
   } catch {
     return new Map();
   }
 };
 
+/** Custom hook to manage search state, streaming, and results caching. */
 export const useSearchState = () => {
-  const [form, setForm] = useState(() => parseSearchParamsToForm(window.location.search));
-  const [appliedForm, setAppliedForm] = useState(() => parseSearchParamsToForm(window.location.search));
-  const [results, setResults] = useState([]);
+  const [form, setForm] = useState<SearchFormState>(() => parseSearchParamsToForm(window.location.search));
+  const [appliedForm, setAppliedForm] = useState<SearchFormState>(() => parseSearchParamsToForm(window.location.search));
+  const [results, setResults] = useState<ImageResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [wasLastResultFromCache, setWasLastResultFromCache] = useState(false);
 
-  const activeControllerRef = useRef(null);
-  const cacheRef = useRef(hydrateCacheFromStorage());
-  const flushFrameRef = useRef(null);
+  const activeControllerRef = useRef<AbortController | null>(null);
+  const cacheRef = useRef<Map<string, CacheEntry>>(hydrateCacheFromStorage());
+  const flushFrameRef = useRef<number | null>(null);
 
   const clearPendingFlush = useCallback(() => {
     if (flushFrameRef.current !== null) {
@@ -64,44 +79,34 @@ export const useSearchState = () => {
 
   const persistCache = useCallback(() => {
     if (!SHOULD_PERSIST_CACHE) return;
-
     try {
       const entries = Array.from(cacheRef.current.entries());
       window.localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(entries));
-    } catch {
-      // no-op: local cache persistence should never break search flow
-    }
+    } catch { /* suppress */ }
   }, []);
 
-  const getCachedResults = useCallback((cacheKey) => {
+  const getCachedResults = useCallback((cacheKey: string): ImageResult[] | null => {
     const entry = cacheRef.current.get(cacheKey);
     if (!entry) return null;
-
     if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
       cacheRef.current.delete(cacheKey);
       persistCache();
       return null;
     }
-
     return entry.results;
   }, [persistCache]);
 
-  const setCachedResults = useCallback((cacheKey, cachedResults) => {
+  const setCachedResults = useCallback((cacheKey: string, cachedResults: ImageResult[]) => {
     if (cacheRef.current.size >= MAX_CACHE_ENTRIES) {
       const oldestKey = cacheRef.current.keys().next().value;
       if (oldestKey) cacheRef.current.delete(oldestKey);
     }
-
-    cacheRef.current.set(cacheKey, {
-      timestamp: Date.now(),
-      results: cachedResults
-    });
+    cacheRef.current.set(cacheKey, { timestamp: Date.now(), results: cachedResults });
     persistCache();
   }, [persistCache]);
 
-  const runSearch = useCallback(async (rawForm) => {
+  const runSearch = useCallback(async (rawForm: SearchFormState) => {
     const preparedForm = sanitizeBeforeSubmit(rawForm);
-
     if (!preparedForm.query) {
       setError(QUERY_REQUIRED_MESSAGE);
       setResults([]);
@@ -130,12 +135,8 @@ export const useSearchState = () => {
       return;
     }
 
-    if (activeControllerRef.current) {
-      activeControllerRef.current.abort();
-    }
-
+    if (activeControllerRef.current) activeControllerRef.current.abort();
     clearPendingFlush();
-
     const controller = new AbortController();
     activeControllerRef.current = controller;
 
@@ -145,8 +146,8 @@ export const useSearchState = () => {
     setWasLastResultFromCache(false);
     setResults([]);
 
-    const streamedResults = [];
-    let pendingResults = [];
+    const streamedResults: ImageResult[] = [];
+    let pendingResults: ImageResult[] = [];
 
     const flushPendingResults = () => {
       if (!pendingResults.length) return;
@@ -166,7 +167,7 @@ export const useSearchState = () => {
     try {
       await searchImagesStream(params, {
         signal: controller.signal,
-        onItem: (item) => {
+        onItem: (item: ImageResult) => {
           pendingResults.push(item);
           if (pendingResults.length >= 20) {
             clearPendingFlush();
@@ -176,7 +177,6 @@ export const useSearchState = () => {
           scheduleFlush();
         }
       });
-
       clearPendingFlush();
       flushPendingResults();
 
@@ -184,11 +184,10 @@ export const useSearchState = () => {
       if (shouldCacheQuery && streamedResults.length <= MAX_CACHEABLE_RESULTS) {
         setCachedResults(cacheKey, streamedResults);
       }
-    } catch (err) {
+    } catch (err: any) {
       if (err.name === 'AbortError') return;
       clearPendingFlush();
       flushPendingResults();
-
       if (streamedResults.length) {
         setError(err.message || 'Streaming interrupted before all results were loaded.');
       } else {
@@ -205,14 +204,13 @@ export const useSearchState = () => {
   }, [clearPendingFlush, getCachedResults, setCachedResults]);
 
   const stopSearch = useCallback(async () => {
+    if (activeControllerRef.current) activeControllerRef.current.abort();
     setIsLoading(false);
     await stopSearchStream();
   }, []);
 
   const resetAll = useCallback(() => {
-    if (activeControllerRef.current) {
-      activeControllerRef.current.abort();
-    }
+    if (activeControllerRef.current) activeControllerRef.current.abort();
     clearPendingFlush();
     setForm(DEFAULT_FORM);
     setAppliedForm(DEFAULT_FORM);
@@ -227,32 +225,15 @@ export const useSearchState = () => {
     const initial = parseSearchParamsToForm(window.location.search);
     setForm(initial);
     setAppliedForm(initial);
-
-    if (initial.query.trim()) {
-      runSearch(initial);
-    }
+    if (initial.query.trim()) runSearch(initial);
   }, [runSearch]);
 
   useEffect(() => {
     return () => {
-      if (activeControllerRef.current) {
-        activeControllerRef.current.abort();
-      }
+      if (activeControllerRef.current) activeControllerRef.current.abort();
       clearPendingFlush();
     };
   }, [clearPendingFlush]);
 
-  return {
-    form,
-    setForm,
-    appliedForm,
-    results,
-    isLoading,
-    error,
-    hasSearched,
-    wasLastResultFromCache,
-    runSearch,
-    stopSearch,
-    resetAll
-  };
+  return { form, setForm, appliedForm, results, isLoading, error, hasSearched, wasLastResultFromCache, runSearch, stopSearch, resetAll };
 };
