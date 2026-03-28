@@ -1,0 +1,479 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 0;
+}
+
+.expandedCard {
+  z-index: 1300;
+}
+
+.expandBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.34);
+  backdrop-filter: blur(1.5px);
+  pointer-events: none;
+  z-index: 1200;
+  animation: fadeBackdropIn 0.24s ease-out;
+}
+
+.cardsCard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.cardsCard .link {
+  width: 100%;
+  height: clamp(150px, 16vw, 210px);
+  aspect-ratio: auto;
+}
+
+.listCard {
+  display: grid;
+  grid-template-columns: minmax(170px, 220px) minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.listCard.noCover {
+  grid-template-columns: 1fr auto;
+}
+
+.moodboardCard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.link {
+  aspect-ratio: 16 / 9;
+  background: #dbeafe;
+  display: block;
+  position: relative;
+  z-index: 1;
+  transition-property: transform, box-shadow;
+  transition-duration: 0.28s;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+  transform-origin: center center;
+  backface-visibility: hidden;
+}
+
+.listCard .link {
+  aspect-ratio: auto;
+  height: 100%;
+  min-height: 150px;
+}
+
+.listCover {
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 140px;
+  max-height: 170px;
+  padding: 8px;
+  position: relative;
+  z-index: 1;
+  transition-property: transform, box-shadow;
+  transition-duration: 0.28s;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+  transform-origin: center center;
+  backface-visibility: hidden;
+}
+
+.listImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.moodboardCard .link {
+  aspect-ratio: auto;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.32s ease;
+  backface-visibility: hidden;
+}
+
+.expandOnHover .expandTarget {
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.moodboardCard .image {
+  height: auto;
+  object-fit: contain;
+}
+
+.expandOnHover .expandTarget.expandActive {
+  transition-duration: 0.55s;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translate3d(var(--expand-shift-x, 0), var(--expand-shift-y, 0), 0)
+    scale(var(--expand-scale, 2.3));
+  z-index: 1400;
+  box-shadow: 0 22px 46px rgba(15, 23, 42, 0.28);
+}
+
+@keyframes fadeBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.expandOnHover .expandTarget.expandActive .image,
+.expandOnHover .expandTarget.expandActive .listImage {
+  transform: none;
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 12px 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.cardsCard .metaRow {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.moodboardCard .metaRow {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.metaCluster {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex-wrap: wrap;
+  overflow: hidden;
+  flex: 1 1 auto;
+}
+
+.cardsCard .metaCluster {
+  flex-wrap: nowrap;
+}
+
+.moodboardCard .metaCluster {
+  flex-wrap: nowrap;
+}
+
+.listCard .metaRow {
+  padding: 14px;
+}
+
+.listContent {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.listMeta {
+  border-left: 1px solid #e2e8f0;
+  padding: 14px 12px;
+  min-width: 94px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.listMetaTop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.listMeta .iconActions {
+  flex-direction: row;
+  margin-left: 0;
+  gap: 6px;
+}
+
+.badge,
+.sizeBadge,
+.warningBadge {
+  font-size: 0.68rem;
+  border-radius: 999px;
+  padding: 3px 6px;
+  white-space: nowrap;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.sizeBadge {
+  background: #ecfeff;
+  color: #0f766e;
+}
+
+.warningBadge {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.iconActions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+  align-items: center;
+  margin-left: auto;
+  flex-wrap: nowrap;
+}
+
+.iconButton {
+  width: clamp(24px, 2.3vw, 30px);
+  height: clamp(24px, 2.3vw, 30px);
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.iconButton svg {
+  width: clamp(12px, 1.4vw, 14px);
+  height: clamp(12px, 1.4vw, 14px);
+}
+
+.iconButton:hover {
+  background: #cbd5e1;
+}
+
+.iconButton:focus {
+  outline: 3px solid color-mix(in srgb, var(--focus) 36%, transparent);
+  outline-offset: 2px;
+}
+
+.infoBlock {
+  padding: 0 12px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.cardsCard .infoBlock {
+  min-height: 132px;
+}
+
+.compactCard .infoTitle,
+.compactCard .infoLine {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compactCard .infoTitle {
+  display: block;
+}
+
+.compactCard .infoValue {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listCard .infoBlock {
+  padding: 0 14px 14px;
+}
+
+.infoTitle {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+}
+
+.titleDivider {
+  width: 100%;
+  height: 1px;
+  background: #e2e8f0;
+  margin-top: 2px;
+}
+
+.infoKey {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: #334155;
+}
+
+.infoValue {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.infoLine {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.tagsRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.tagsWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tagChip {
+  font-size: 0.63rem;
+  font-weight: 600;
+  color: #0f766e;
+  background: #dff8f2;
+  border: 1px solid #bff2e7;
+  border-radius: 999px;
+  padding: 2px 6px;
+}
+
+@media (max-width: 960px) {
+  .listCard {
+    grid-template-columns: minmax(150px, 180px) minmax(0, 1fr) auto;
+  }
+
+  .listMeta {
+    min-width: 84px;
+    padding-inline: 10px;
+  }
+}
+
+@media (max-width: 760px) {
+  .cardsCard .link {
+    height: clamp(138px, 42vw, 176px);
+  }
+
+  .metaRow {
+    gap: 8px;
+    align-items: center;
+  }
+
+  .cardsCard .metaRow {
+    gap: 6px;
+  }
+
+  .badge,
+  .sizeBadge,
+  .warningBadge {
+    font-size: 0.66rem;
+  }
+
+  .listCard {
+    grid-template-columns: 1fr;
+  }
+
+  .listCard .link,
+  .listCover {
+    min-height: 0;
+  }
+
+  .listMeta {
+    border-left: 0;
+    border-top: 1px solid #e2e8f0;
+    width: 100%;
+    align-items: stretch;
+    flex-direction: row;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .listMetaTop {
+    align-items: flex-start;
+  }
+
+  .listMeta .iconActions {
+    margin-left: auto;
+    flex-direction: row;
+  }
+
+  .expandOnHover .expandTarget.expandActive .image,
+  .expandOnHover .expandTarget.expandActive .listImage {
+    transform: none;
+  }
+
+  .expandOnHover .expandTarget.expandActive {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .infoBlock,
+  .listCard .infoBlock {
+    padding-inline: 10px;
+    padding-bottom: 10px;
+  }
+
+  .cardsCard .metaCluster {
+    gap: 4px;
+  }
+
+  .iconActions {
+    gap: 4px;
+  }
+
+  .iconButton {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+  }
+
+  .iconButton svg {
+    width: 12px;
+    height: 12px;
+  }
+}

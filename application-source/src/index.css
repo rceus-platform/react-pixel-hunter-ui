@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'Plus Jakarta Sans', 'Avenir Next', 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  --bg-main: #f5f8ff;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --surface: #ffffff;
+  --text-main: #13192b;
+  --text-muted: #55607a;
+  --brand: #0f766e;
+  --brand-strong: #115e59;
+  --danger: #be123c;
+  --border: #d5ddf0;
+  --chip-bg: #e7f6f3;
+  --focus: #0ea5e9;
+  --shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --radius-xl: 18px;
+  --radius-md: 12px;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  width: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% -10%, rgba(14, 165, 233, 0.25), transparent 45%),
+    radial-gradient(circle at 80% -20%, rgba(15, 118, 110, 0.2), transparent 40%),
+    var(--bg-main);
+  color: var(--text-main);
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.015em;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+input,
+select,
+button {
+  min-height: 38px;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--focus) 34%, transparent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
