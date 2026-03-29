@@ -168,6 +168,7 @@ export const useSearchState = () => {
       await searchImagesStream(params, {
         signal: controller.signal,
         onItem: (item: ImageResult) => {
+          if (controller.signal.aborted) return;
           pendingResults.push(item);
           if (pendingResults.length >= 20) {
             clearPendingFlush();
@@ -180,8 +181,7 @@ export const useSearchState = () => {
       clearPendingFlush();
       flushPendingResults();
 
-      const shouldCacheQuery = preparedForm.pages > 0 && preparedForm.limit > 0;
-      if (shouldCacheQuery && streamedResults.length <= MAX_CACHEABLE_RESULTS) {
+      if (streamedResults.length > 0 && streamedResults.length <= MAX_CACHEABLE_RESULTS) {
         setCachedResults(cacheKey, streamedResults);
       }
     } catch (err: any) {
@@ -204,10 +204,14 @@ export const useSearchState = () => {
   }, [clearPendingFlush, getCachedResults, setCachedResults]);
 
   const stopSearch = useCallback(async () => {
-    if (activeControllerRef.current) activeControllerRef.current.abort();
+    if (activeControllerRef.current) {
+      activeControllerRef.current.abort();
+      activeControllerRef.current = null;
+    }
+    clearPendingFlush();
     setIsLoading(false);
     await stopSearchStream();
-  }, []);
+  }, [clearPendingFlush]);
 
   const resetAll = useCallback(() => {
     if (activeControllerRef.current) activeControllerRef.current.abort();

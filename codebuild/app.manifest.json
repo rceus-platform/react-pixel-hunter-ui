@@ -4,6 +4,7 @@
   "start_command": null,
   "port": null,
   "domain": "pixel-hunter-ui.rceus.duckdns.org",
+  "timezone": "Asia/Kolkata",
   "env_vars": [
     "SITE_PASSCODE",
     "VITE_API_BASE_URL",

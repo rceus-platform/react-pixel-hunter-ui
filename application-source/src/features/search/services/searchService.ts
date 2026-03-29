@@ -78,6 +78,10 @@ export const searchImagesStream = async (
   };
 
   while (true) {
+    if (signal?.aborted) {
+      await reader.cancel();
+      break;
+    }
     const { value, done } = await reader.read();
     if (done) break;
 
