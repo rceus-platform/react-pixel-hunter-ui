@@ -16,7 +16,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          envs: GITHUB_REPOSITORY,APP_SECRET_JSON_B64,VITE_API_BASE_URL,VITE_PERSIST_SEARCH_CACHE,SITE_PASSCODE
+          envs: GITHUB_REPOSITORY,APP_SECRET_JSON_B64,SITE_PASSCODE,VITE_API_BASE_URL,VITE_PERSIST_SEARCH_CACHE
           script: |
             set -e
 
@@ -53,6 +53,6 @@ jobs:
             echo "✅ Deploy completed successfully"
         env:
           APP_SECRET_JSON_B64: ${{ secrets.APP_SECRET_JSON_B64 }}
+          SITE_PASSCODE: ${{ secrets.SITE_PASSCODE }}
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           VITE_PERSIST_SEARCH_CACHE: ${{ secrets.VITE_PERSIST_SEARCH_CACHE }}
-          SITE_PASSCODE: ${{ secrets.SITE_PASSCODE }}
