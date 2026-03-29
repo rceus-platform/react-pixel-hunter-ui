@@ -16,6 +16,7 @@ import { SearchForm, useSearchState } from '../features/search';
 import { ImageGrid, ResultsSummary } from '../features/gallery';
 import { useLocalFilters } from '../features/filters';
 import { getActiveFilterChips } from '../utils/queryParams';
+import { PasscodeOverlay } from '../features/auth/PasscodeOverlay';
 import styles from './App.module.css';
 
 /** Root Application component. */
@@ -41,6 +42,22 @@ export const App: React.FC = () => {
     return Number.isInteger(stored) ? Math.min(4, Math.max(0, stored)) : 0;
   });
 
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return window.localStorage.getItem('pixel_hunter_auth') === 'true';
+  });
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const handleVerify = (pin: string) => {
+    const expectedPin = import.meta.env.SITE_PASSCODE;
+    if (pin === expectedPin) {
+      setIsAuthenticated(true);
+      window.localStorage.setItem('pixel_hunter_auth', 'true');
+      setAuthError(null);
+    } else {
+      setAuthError('Invalid passcode. Please try again.');
+    }
+  };
+
   const {
     form, setForm, appliedForm, results, isLoading, error, hasSearched, wasLastResultFromCache, runSearch, stopSearch, resetAll
   } = useSearchState();
@@ -58,6 +75,9 @@ export const App: React.FC = () => {
 
   return (
     <div className={styles.page}>
+      {!isAuthenticated && (
+        <PasscodeOverlay onVerify={handleVerify} error={authError} />
+      )}
       <header className={styles.hero}>
         <p className={styles.eyebrow}>Pixel Hunter Pro</p>
         <h1>Find crisp HD wallpapers in seconds</h1>
