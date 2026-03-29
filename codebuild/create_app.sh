@@ -5,6 +5,8 @@ set -euo pipefail
 # REQUIRED ENV
 # ================================
 APP_NAME="${APP_NAME:?APP_NAME not set}"
+# APP_SECRET_PATH may be optional for some apps, but we'll default to an empty string if not provided
+APP_SECRET_PATH="${APP_SECRET_PATH:-}"
 GITHUB_REPOSITORY="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY not set}"
 
 # ================================
@@ -42,28 +44,110 @@ fi
 
 cd "$APP_WORKDIR"
 
-# Ensure app dir is writable so new subdirs can be created at runtime
-chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_WORKDIR"
-chmod -R u+rwX,g+rwX "$APP_WORKDIR"
+# Ensure correct permissions
+sudo chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_WORKDIR"
+sudo chmod -R u+rwX,g+rwX "$APP_WORKDIR"
 
 # ================================
-# RUNTIME SETUP
+# OS DEPENDENCIES
+# ================================
+echo "🔧 Installing OS dependencies"
+
+install_if_missing() {
+  local PKG=$1
+  if ! dpkg -l "$PKG" &>/dev/null; then
+    echo "📦 Installing $PKG..."
+    sudo apt-get install -y "$PKG"
+  else
+    echo "✅ $PKG is already installed"
+  fi
+}
+
+# Define dependencies for ALL runtimes
+CORE_PKGS="jq curl ca-certificates nginx build-essential clang openssl"
+# Browsing/Scraping dependencies (Universal)
+BROWSER_PKGS="chromium-browser chromium-chromedriver xvfb"
+# Python Specific (needed for build/setup)
+PYTHON_PKGS="python3-pip python3-venv python3-dev"
+
+# Check if we need to update apt
+NEED_UPDATE=false
+for pkg in $CORE_PKGS $BROWSER_PKGS $PYTHON_PKGS; do
+  if ! dpkg -l "$pkg" &>/dev/null; then
+    NEED_UPDATE=true
+    break
+  fi
+done
+
+if [ "$NEED_UPDATE" = true ]; then
+  echo "⬆ Updating apt-get"
+  sudo apt-get update -y
+fi
+
+# Install all dependencies
+for pkg in $CORE_PKGS $BROWSER_PKGS $PYTHON_PKGS; do
+  install_if_missing "$pkg"
+done
+
+# ================================
+# SSL PROVISIONING
+# ================================
+echo "🔐 Checking SSL certificates"
+SSL_DIR="/etc/nginx/ssl"
+if [ ! -f "$SSL_DIR/self.crt" ]; then
+  echo "🎁 Generating self-signed certificate"
+  sudo mkdir -p "$SSL_DIR"
+  sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout "$SSL_DIR/self.key" -out "$SSL_DIR/self.crt" \
+    -subj "/C=US/ST=State/L=City/O=Organization/CN=${DOMAIN}"
+fi
+
+# ================================
+# RUNTIME SETUP (Python)
 # ================================
 if [ "$RUNTIME" = "python" ]; then
   echo "🐍 Python setup with Poetry"
 
-  # Install poetry if missing
-  if ! sudo -u "$DEPLOY_USER" command -v poetry &> /dev/null; then
-    echo "📥 Installing Poetry"
-    sudo -u "$DEPLOY_USER" pipx install poetry || sudo -u "$DEPLOY_USER" python3 -m pip install --user poetry
-    export PATH="$PATH:/home/ubuntu/.local/bin"
+  PYTHON_BIN=$(which python3)
+  POETRY_BIN="/home/$DEPLOY_USER/.local/bin/poetry"
+
+  # Install/Repair Poetry
+  if ! sudo -u "$DEPLOY_USER" [ -x "$POETRY_BIN" ] || ! sudo -u "$DEPLOY_USER" "$POETRY_BIN" --version &>/dev/null; then
+    echo "📥 Installing/Repairing Poetry using $PYTHON_BIN"
+    curl -sSL https://install.python-poetry.org | sudo -u "$DEPLOY_USER" "$PYTHON_BIN" -
   fi
 
-  # Configure poetry to create virtualenv in-project
-  sudo -u "$DEPLOY_USER" poetry config virtualenvs.in-project true
+  export PATH="/home/$DEPLOY_USER/.local/bin:$PATH"
 
-  # Install dependencies
-  sudo -u "$DEPLOY_USER" poetry install --no-root --no-interaction
+  # Configure Poetry
+  sudo -u "$DEPLOY_USER" "$POETRY_BIN" config virtualenvs.in-project true
+
+  # Handle .venv compatibility
+  if [ -d ".venv" ]; then
+    CUR_V=$( .venv/bin/python --version | awk '{print $2}' | cut -d. -f1,2 )
+    SYS_V=$( "$PYTHON_BIN" --version | awk '{print $2}' | cut -d. -f1,2 )
+    if [ "$CUR_V" != "$SYS_V" ]; then
+      echo "🗑️ Removing incompatible .venv ($CUR_V vs $SYS_V)"
+      sudo rm -rf .venv
+    fi
+  fi
+
+  if [ ! -d ".venv" ]; then
+    echo "📦 Creating .venv with $PYTHON_BIN"
+    sudo -u "$DEPLOY_USER" "$PYTHON_BIN" -m venv .venv
+  fi
+
+  echo "📦 Installing Python dependencies"
+  sudo -u "$DEPLOY_USER" "$POETRY_BIN" install --no-root --no-interaction
+
+  if [ ! -d ".venv" ]; then
+    echo "❌ .venv not created"
+    exit 1
+  fi
+
+# ================================
+# RUNTIME SETUP (React)
+# ================================
 elif [ "$RUNTIME" = "react" ]; then
   echo "⚛️ React setup with NPM"
 
@@ -80,19 +164,32 @@ elif [ "$RUNTIME" = "react" ]; then
     sudo apt-get install -y nodejs
   fi
 
-  # Install dependencies
+  # Environment variable injection from manifest
+  echo "📦 Preparing .env for build"
+  sudo -u "$DEPLOY_USER" rm -f .env
+  ENV_VARS=$(jq -r '.env_vars // [] | .[]' "$MANIFEST")
+  if [ -n "$ENV_VARS" ] && [ -f "$APP_SECRET_PATH" ]; then
+    for var in $ENV_VARS; do
+      val=$(jq -r ".$var // empty" "$APP_SECRET_PATH")
+      if [ -n "$val" ]; then
+        echo "$var=$val" | sudo -u "$DEPLOY_USER" tee -a .env > /dev/null
+      fi
+    done
+  fi
+
+  echo "📦 Installing NPM dependencies"
   sudo -u "$DEPLOY_USER" npm install
 
-  # Build application
+  echo "🏗️ Building React application"
   sudo -u "$DEPLOY_USER" npm run build
 fi
 
 # ================================
-# SYSTEMD (only for server-based runtimes)
+# SYSTEMD (Only for persistent services)
 # ================================
-if [ "$RUNTIME" != "react" ]; then
+if [ "$RUNTIME" = "python" ]; then
   echo "🔧 Creating systemd service"
-  cat > "/etc/systemd/system/${APP_NAME}.service" <<EOF
+  sudo tee "/etc/systemd/system/${APP_NAME}.service" > /dev/null <<EOF
 [Unit]
 Description=${APP_NAME}
 After=network.target
@@ -102,9 +199,12 @@ User=ubuntu
 WorkingDirectory=${APP_WORKDIR}
 UMask=0002
 
-$(if [ "$RUNTIME" = "python" ]; then echo "Environment=PYTHONPATH=${APP_WORKDIR}"; fi)
+$(if [ -n "$APP_SECRET_PATH" ]; then echo "Environment=APP_SECRET_JSON=${APP_SECRET_PATH}"; fi)
+Environment=PYTHONPATH=${APP_WORKDIR}
+Environment=PATH=/home/ubuntu/.local/bin:/usr/bin:/bin
 
 ExecStart=${APP_WORKDIR}/${START_CMD}
+
 Restart=always
 RestartSec=3
 
@@ -112,23 +212,23 @@ RestartSec=3
 WantedBy=multi-user.target
 EOF
 
-  systemctl daemon-reload
-  systemctl enable "${APP_NAME}"
-  systemctl restart "${APP_NAME}"
-else
-  echo "⚛️ React app — static files served by nginx, no systemd service needed"
+  sudo systemctl daemon-reload
+  sudo systemctl enable "${APP_NAME}"
+  sudo systemctl restart "${APP_NAME}"
 fi
 
 # ================================
-# NGINX (GENERATED)
+# NGINX CONFIGURATION
 # ================================
-echo "🌐 Generating nginx config"
+echo "🌐 Generating nginx config for $DOMAIN"
 
 if [ "$RUNTIME" = "react" ]; then
+  # React: Serve static files from /dist
   LOCATION_CONFIG="    root ${APP_WORKDIR}/dist;
     index index.html;
     try_files \$uri \$uri/ /index.html;"
 else
+  # Python: Proxy to the local port
   LOCATION_CONFIG="    proxy_pass http://127.0.0.1:${PORT};
     proxy_http_version 1.1;
     proxy_set_header Host \$host;
@@ -137,7 +237,7 @@ else
     proxy_set_header X-Forwarded-Proto \$scheme;"
 fi
 
-cat > "/etc/nginx/sites-available/${DOMAIN}" <<EOF
+sudo tee "/etc/nginx/sites-available/${DOMAIN}" > /dev/null <<EOF
 server {
   listen 80;
   server_name ${DOMAIN};
@@ -163,8 +263,9 @@ ${LOCATION_CONFIG}
 }
 EOF
 
-ln -sf "/etc/nginx/sites-available/${DOMAIN}" "/etc/nginx/sites-enabled/${DOMAIN}"
-nginx -t
-systemctl reload nginx
+sudo ln -sf "/etc/nginx/sites-available/${DOMAIN}" "/etc/nginx/sites-enabled/${DOMAIN}"
 
-echo "✅ App created successfully"
+sudo nginx -t
+sudo systemctl reload nginx
+
+echo "✅ App created/updated successfully"
