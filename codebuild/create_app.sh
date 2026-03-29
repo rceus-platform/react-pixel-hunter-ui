@@ -164,17 +164,19 @@ elif [ "$RUNTIME" = "react" ]; then
     sudo apt-get install -y nodejs
   fi
 
-  # Environment variable injection from manifest
-  echo "📦 Preparing .env for build"
-  sudo -u "$DEPLOY_USER" rm -f .env
-  ENV_VARS=$(jq -r '.env_vars // [] | .[]' "$MANIFEST")
-  if [ -n "$ENV_VARS" ] && [ -f "$APP_SECRET_PATH" ]; then
+  # Environment variable injection from manifest (Only if APP_SECRET_PATH is provided)
+  if [ -n "$APP_SECRET_PATH" ] && [ -f "$APP_SECRET_PATH" ]; then
+    echo "📦 Preparing .env for build from secrets file"
+    sudo -u "$DEPLOY_USER" rm -f .env
+    ENV_VARS=$(jq -r '.env_vars // [] | .[]' "$MANIFEST")
     for var in $ENV_VARS; do
       val=$(jq -r ".$var // empty" "$APP_SECRET_PATH")
       if [ -n "$val" ]; then
         echo "$var=$val" | sudo -u "$DEPLOY_USER" tee -a .env > /dev/null
       fi
     done
+  else
+    echo "✅ Using existing .env or environment variables (skipping secret injection)"
   fi
 
   echo "📦 Installing NPM dependencies"
