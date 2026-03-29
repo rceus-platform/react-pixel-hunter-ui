@@ -33,7 +33,7 @@ export const App: React.FC = () => {
 
   const [viewMode, setViewMode] = useState<string>(() => {
     const stored = window.localStorage.getItem('pixel_hunter_view_mode');
-    return stored || 'cards';
+    return stored || 'moodboard';
   });
 
   const [coverScale, setCoverScale] = useState(() => {

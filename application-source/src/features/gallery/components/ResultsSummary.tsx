@@ -97,7 +97,7 @@ export const ResultsSummary: React.FC<Props> = ({
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
-  const activeViewLabel = VIEW_OPTIONS.find((option) => option.value === viewMode)?.label ?? 'Cards';
+  const activeViewLabel = VIEW_OPTIONS.find((option) => option.value === viewMode)?.label ?? 'Moodboard';
   
   const toggleField = (key: string, checked: boolean) => {
     setVisibleFields((prev) => ({
