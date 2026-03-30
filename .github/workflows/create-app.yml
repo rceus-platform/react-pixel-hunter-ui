@@ -4,10 +4,58 @@ on:
   workflow_dispatch:
 
 jobs:
-  create:
+  build:
     runs-on: ubuntu-latest
-
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: application-source/package-lock.json
+
+      - name: Install dependencies
+        working-directory: application-source
+        run: npm install
+
+      - name: Build application
+        working-directory: application-source
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_PERSIST_SEARCH_CACHE: ${{ secrets.VITE_PERSIST_SEARCH_CACHE }}
+          SITE_PASSCODE: ${{ secrets.SITE_PASSCODE }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: application-source/dist/
+
+  create:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist-artifact
+
+      - name: Transfer build artifacts to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          source: "dist-artifact/*"
+          target: "/tmp/pixel-hunter-ui-dist"
+          strip_components: 1
+
       - name: Provision app + secrets on VM
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -23,7 +71,6 @@ jobs:
             SECRET_PATH="/opt/secrets/${APP_NAME}.json"
 
             echo "➡ Injecting secrets for $APP_NAME"
-
             sudo mkdir -p /opt/secrets /opt/apps
             sudo chown -R ubuntu:ubuntu /opt/apps
 
@@ -46,13 +93,18 @@ jobs:
 
             cd "$APP_DIR"
 
+            echo "🚀 Installing pre-built artifacts"
+            rm -rf application-source/dist
+            mkdir -p application-source/dist
+            cp -r /tmp/pixel-hunter-ui-dist/* application-source/dist/
+            rm -rf /tmp/pixel-hunter-ui-dist
+
             echo "➡ Making create_app.sh executable"
             chmod +x codebuild/create_app.sh
 
             echo "➡ Running repo-owned create_app.sh"
             export APP_NAME
             export APP_SECRET_PATH="$SECRET_PATH"
-
             sudo -E bash codebuild/create_app.sh
         env:
           APP_SECRET_JSON_B64: ${{ secrets.APP_SECRET_JSON_B64 }}

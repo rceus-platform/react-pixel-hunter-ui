@@ -6,11 +6,59 @@ on:
       - main
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Deploy latest code
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: application-source/package-lock.json
+
+      - name: Install dependencies
+        working-directory: application-source
+        run: npm install
+
+      - name: Build application
+        working-directory: application-source
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_PERSIST_SEARCH_CACHE: ${{ secrets.VITE_PERSIST_SEARCH_CACHE }}
+          SITE_PASSCODE: ${{ secrets.SITE_PASSCODE }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: application-source/dist/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist-artifact
+
+      - name: Transfer build artifacts to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          source: "dist-artifact/*"
+          target: "/tmp/pixel-hunter-ui-dist"
+          strip_components: 1
+
+      - name: Deploy and Configure
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VM_HOST }}
@@ -22,7 +70,6 @@ jobs:
 
             APP_NAME="$(basename $GITHUB_REPOSITORY)"
             APP_DIR="/opt/apps/$APP_NAME"
-            MANIFEST=$APP_DIR/codebuild/app.manifest.json
             SECRET_PATH="/opt/secrets/${APP_NAME}.json"
 
             echo "➡ Injecting secrets for $APP_NAME"
@@ -34,20 +81,21 @@ jobs:
             sudo chmod 600 "$SECRET_PATH"
 
             echo "➡ Deploying $APP_NAME"
-
             cd $APP_DIR
 
-            echo "🧹 Cleaning untracked files"
-            git clean -fd
-            git stash
+            echo "🧹 Cleaning and updating code"
+            git fetch origin main
+            git reset --hard origin/main
 
-            echo "📥 Pulling code"
-            git pull origin main
+            echo "🚀 Installing pre-built artifacts"
+            rm -rf application-source/dist
+            mkdir -p application-source/dist
+            cp -r /tmp/pixel-hunter-ui-dist/* application-source/dist/
+            rm -rf /tmp/pixel-hunter-ui-dist
 
             echo "➡ Handover to standardized create_app.sh"
             export APP_NAME
             export APP_SECRET_PATH="$SECRET_PATH"
-            # create_app.sh handles .env, runtime setup, systemd, and nginx
             sudo -E bash codebuild/create_app.sh
 
             echo "✅ Deploy completed successfully"
