@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActiveFilterState, AvailableFilters, FilterChip } from '../../../types';
+import { ActiveFilterState, AvailableFilters, FilterChip, SortOption, SortOrder, SortState } from '../../../types';
 import { LocalFilterPopup } from '../../filters';
+import { SortPopup } from './SortPopup';
 import styles from './ResultsSummary.module.css';
 
 const VIEW_OPTIONS = [
@@ -52,6 +53,14 @@ function FilterIcon() {
   );
 }
 
+function SortIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9M3 12h5M17 4v12m0 0l-3-3m3 3l3-3M3 17h13" />
+    </svg>
+  );
+}
+
 interface Props {
   count: number;
   filteredCount: number;
@@ -71,6 +80,9 @@ interface Props {
   setRangeFilter: (key: keyof ActiveFilterState, value: string) => void;
   resetLocalFilters: () => void;
   activeFilterCount: number;
+  sortState: SortState;
+  setSortOption: (option: SortOption) => void;
+  setSortOrder: (order: SortOrder) => void;
 }
 
 export const ResultsSummary: React.FC<Props> = ({
@@ -91,12 +103,17 @@ export const ResultsSummary: React.FC<Props> = ({
   toggleFilter,
   setRangeFilter,
   resetLocalFilters,
-  activeFilterCount
+  activeFilterCount,
+  sortState,
+  setSortOption,
+  setSortOrder
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
   const activeViewLabel = VIEW_OPTIONS.find((option) => option.value === viewMode)?.label ?? 'Moodboard';
   
   const toggleField = (key: string, checked: boolean) => {
@@ -153,7 +170,11 @@ export const ResultsSummary: React.FC<Props> = ({
           <button
             type="button"
             className={styles.viewButton}
-            onClick={() => setIsOpen((prev) => !prev)}
+            onClick={() => {
+              setIsOpen((prev) => !prev);
+              setIsFiltersOpen(false);
+              setIsSortOpen(false);
+            }}
             aria-expanded={isOpen}
             aria-haspopup="true"
           >
@@ -217,11 +238,43 @@ export const ResultsSummary: React.FC<Props> = ({
           ) : null}
         </div>
 
+        <div className={styles.viewControl} ref={sortRef}>
+          <button
+            type="button"
+            className={`${styles.viewButton} ${sortState.option !== 'none' ? styles.filterButtonActive : ''}`}
+            onClick={() => {
+              setIsSortOpen((prev) => !prev);
+              setIsFiltersOpen(false);
+              setIsOpen(false);
+            }}
+            aria-expanded={isSortOpen}
+            aria-haspopup="true"
+          >
+            <span className={styles.viewButtonIcon}>
+              <SortIcon />
+            </span>
+            <span>Sort By {sortState.option !== 'none' ? `(${sortState.option})` : ''}</span>
+          </button>
+
+          {isSortOpen ? (
+            <SortPopup
+              sortState={sortState}
+              onSortOptionChange={setSortOption}
+              onSortOrderChange={setSortOrder}
+              onClose={() => setIsSortOpen(false)}
+            />
+          ) : null}
+        </div>
+
         <div className={styles.viewControl} ref={filterRef}>
           <button
             type="button"
             className={`${styles.viewButton} ${activeFilterCount > 0 ? styles.filterButtonActive : ''}`}
-            onClick={() => setIsFiltersOpen((prev) => !prev)}
+            onClick={() => {
+              setIsFiltersOpen((prev) => !prev);
+              setIsSortOpen(false);
+              setIsOpen(false);
+            }}
             aria-expanded={isFiltersOpen}
             aria-haspopup="true"
           >
@@ -239,6 +292,7 @@ export const ResultsSummary: React.FC<Props> = ({
               setRangeFilter={setRangeFilter}
               resetFilters={resetLocalFilters}
               onClose={() => setIsFiltersOpen(false)}
+              activeCount={activeFilterCount}
             />
           ) : null}
         </div>

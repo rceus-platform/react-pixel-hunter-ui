@@ -63,7 +63,8 @@ export const App: React.FC = () => {
   } = useSearchState();
 
   const { 
-    filteredResults, availableFilters, activeFilters, toggleFilter, setRangeFilter, resetFilters: resetLocalFilters, activeCount: activeFilterCount 
+    filteredResults, availableFilters, activeFilters, toggleFilter, setRangeFilter, resetFilters: resetLocalFilters, activeCount: activeFilterCount,
+    sortState, setSortOption, setSortOrder
   } = useLocalFilters(results);
 
   const chips = getActiveFilterChips(appliedForm);
@@ -107,6 +108,9 @@ export const App: React.FC = () => {
             setRangeFilter={setRangeFilter}
             resetLocalFilters={resetLocalFilters}
             activeFilterCount={activeFilterCount}
+            sortState={sortState}
+            setSortOption={setSortOption}
+            setSortOrder={setSortOrder}
           />
         )}
 

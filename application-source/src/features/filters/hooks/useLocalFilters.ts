@@ -11,7 +11,7 @@
  */
 
 import { useMemo, useState, useCallback } from 'react';
-import { ImageResult, ActiveFilterState, AvailableFilters } from '../../../types';
+import { ImageResult, ActiveFilterState, AvailableFilters, SortOption, SortOrder, SortState } from '../../../types';
 
 /** Utility to detect the source engine from a URL. */
 const detectSourceEngine = (url: string): string => {
@@ -48,9 +48,19 @@ const INITIAL_FILTERS: ActiveFilterState = {
   sources: [], tags: [], orientations: [], minWidth: '', maxWidth: '', minHeight: '', maxHeight: '', minSize: '', maxSize: ''
 };
 
-/** Custom hook to manage local filtering of search results. */
+/** Custom hook to manage local filtering and sorting of search results. */
 export function useLocalFilters(results: ImageResult[]) {
   const [activeFilters, setActiveFilters] = useState<ActiveFilterState>({ ...INITIAL_FILTERS });
+
+  const [sortState, setSortState] = useState<SortState>(() => {
+    const stored = window.localStorage.getItem('pixel_hunter_sort_state');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch { /* fallback to default */ }
+    }
+    return { option: 'none', order: 'desc' };
+  });
 
   const availableFilters = useMemo<AvailableFilters>(() => {
     const filters = { sources: new Set<string>(), tags: new Set<string>(), orientations: new Set<string>() };
@@ -71,7 +81,7 @@ export function useLocalFilters(results: ImageResult[]) {
   }, [results]);
 
   const filteredResults = useMemo(() => {
-    return results.filter(item => {
+    const filtered = results.filter(item => {
       if (activeFilters.sources.length > 0) {
         const rawSourceText = asText(item.search_engine) || detectSourceEngine(item.url);
         const source = toTitleCase(rawSourceText.replace(/[_-]+/g, ' '));
@@ -96,7 +106,25 @@ export function useLocalFilters(results: ImageResult[]) {
       }
       return true;
     });
-  }, [results, activeFilters]);
+
+    if (sortState.option === 'none') return filtered;
+
+    return [...filtered].sort((a, b) => {
+      let valA = 0;
+      let valB = 0;
+
+      if (sortState.option === 'size') {
+        valA = parseToMB(a.size);
+        valB = parseToMB(b.size);
+      } else if (sortState.option === 'resolution') {
+        valA = (a.width || 0) * (a.height || 0);
+        valB = (b.width || 0) * (b.height || 0);
+      }
+
+      if (sortState.order === 'asc') return valA - valB;
+      return valB - valA;
+    });
+  }, [results, activeFilters, sortState]);
 
   const toggleFilter = useCallback((category: keyof Pick<ActiveFilterState, 'sources' | 'tags' | 'orientations'>, value: string) => {
     setActiveFilters(prev => {
@@ -110,6 +138,22 @@ export function useLocalFilters(results: ImageResult[]) {
     setActiveFilters(prev => ({ ...prev, [key]: value }));
   }, []);
 
+  const setSortOption = useCallback((option: SortOption) => {
+    setSortState(prev => {
+      const next = { ...prev, option };
+      window.localStorage.setItem('pixel_hunter_sort_state', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const setSortOrder = useCallback((order: SortOrder) => {
+    setSortState(prev => {
+      const next = { ...prev, order };
+      window.localStorage.setItem('pixel_hunter_sort_state', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const resetFilters = useCallback(() => { setActiveFilters({ ...INITIAL_FILTERS }); }, []);
 
   const activeCount = useMemo(() => {
@@ -120,5 +164,8 @@ export function useLocalFilters(results: ImageResult[]) {
     return count;
   }, [activeFilters]);
 
-  return { filteredResults, availableFilters, activeFilters, toggleFilter, setRangeFilter, resetFilters, activeCount };
+  return { 
+    filteredResults, availableFilters, activeFilters, toggleFilter, setRangeFilter, resetFilters, activeCount,
+    sortState, setSortOption, setSortOrder
+  };
 }

@@ -178,6 +178,9 @@ export const useSearchState = () => {
           scheduleFlush();
         }
       });
+
+      if (controller.signal.aborted) return;
+
       clearPendingFlush();
       flushPendingResults();
 
@@ -204,13 +207,18 @@ export const useSearchState = () => {
   }, [clearPendingFlush, getCachedResults, setCachedResults]);
 
   const stopSearch = useCallback(async () => {
+    // 1. Immediately abort local fetch & streaming
     if (activeControllerRef.current) {
       activeControllerRef.current.abort();
       activeControllerRef.current = null;
     }
+    
+    // 2. Clear UI loading states and animation frames
     clearPendingFlush();
     setIsLoading(false);
-    await stopSearchStream();
+    
+    // 3. Notify backend to stop (fire and forget, don't block UI)
+    stopSearchStream().catch(() => { /* suppressed */ });
   }, [clearPendingFlush]);
 
   const resetAll = useCallback(() => {

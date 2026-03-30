@@ -38,6 +38,14 @@ export interface SearchFormState {
 
 export type FilterChip = string;
 
+export type SortOption = 'none' | 'size' | 'resolution';
+export type SortOrder = 'asc' | 'desc';
+
+export interface SortState {
+  option: SortOption;
+  order: SortOrder;
+}
+
 export interface AvailableFilters {
   sources: string[];
   tags: string[];

@@ -62,9 +62,10 @@ export const searchImagesStream = async (
   let buffer = '';
   let count = 0;
 
-  const parseNdjsonChunk = (chunk: string, callback: (item: ImageResult) => void) => {
+  const parseNdjsonChunk = (chunk: string, callback: (item: ImageResult) => void, chunkSignal?: AbortSignal) => {
     let internalCount = 0;
     for (const rawLine of chunk.split('\n')) {
+      if (chunkSignal?.aborted) break;
       const line = rawLine.trim();
       if (!line) continue;
       try {
@@ -84,16 +85,23 @@ export const searchImagesStream = async (
     }
     const { value, done } = await reader.read();
     if (done) break;
+    
+    if (signal?.aborted) {
+      await reader.cancel();
+      break;
+    }
 
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split('\n');
     buffer = lines.pop() ?? '';
-    count += parseNdjsonChunk(lines.join('\n'), onItem);
+    count += parseNdjsonChunk(lines.join('\n'), onItem, signal);
   }
+
+  if (signal?.aborted) return { count };
 
   buffer += decoder.decode();
   if (buffer.trim()) {
-    count += parseNdjsonChunk(buffer, onItem);
+    count += parseNdjsonChunk(buffer, onItem, signal);
   }
 
   return { count };
