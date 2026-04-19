@@ -48,7 +48,7 @@ export const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const handleVerify = (pin: string) => {
-    const expectedPin = import.meta.env.SITE_PASSCODE;
+    const expectedPin = import.meta.env.VITE_SITE_PASSCODE;
     if (pin === expectedPin) {
       setIsAuthenticated(true);
       window.localStorage.setItem('pixel_hunter_auth', 'true');
