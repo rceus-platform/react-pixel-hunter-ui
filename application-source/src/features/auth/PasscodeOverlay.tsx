@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import styles from './PasscodeOverlay.module.css';
 
 interface PasscodeOverlayProps {
@@ -42,13 +42,6 @@ export const PasscodeOverlay: React.FC<PasscodeOverlayProps> = ({ onVerify, erro
     }
   };
 
-  // Auto-submit when 4th digit is entered
-  useEffect(() => {
-    const pinString = pin.join('');
-    if (pinString.length === 4) {
-      onVerify(pinString);
-    }
-  }, [pin, onVerify]);
 
   return (
     <div className={styles.overlay}>
